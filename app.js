@@ -28,6 +28,7 @@ const statusEl = document.getElementById("status");
 const listEl = document.getElementById("entries");
 const emptyEl = document.getElementById("empty");
 const countEl = document.getElementById("count");
+const searchEl = document.getElementById("search");
 
 const signinBtn = document.getElementById("signin-btn");
 const signoutBtn = document.getElementById("signout-btn");
@@ -138,30 +139,52 @@ function esc(s) {
   return d.innerHTML;
 }
 
-// --- Live shared list (public read) ---
+// --- Live shared list (public read) + client-side search ---
+let allEntries = []; // latest snapshot data, newest first
+
+function matchesSearch(d, term) {
+  if (!term) return true;
+  return [d.fact, d.person, d.gdgCommunity, d.submittedBy]
+    .some((v) => (v || "").toLowerCase().includes(term));
+}
+
+function render() {
+  const term = searchEl.value.trim().toLowerCase();
+  const shown = allEntries.filter((d) => matchesSearch(d, term));
+
+  listEl.innerHTML = "";
+  countEl.textContent = shown.length;
+  emptyEl.classList.toggle("hidden", shown.length > 0);
+  emptyEl.textContent =
+    allEntries.length === 0
+      ? "No fun facts yet — be the first! ✨"
+      : "No matches for your search. 🔍";
+
+  for (const d of shown) {
+    const by = d.submittedBy ? ` · added by ${esc(d.submittedBy)}` : "";
+    const gdg = d.gdgCommunity
+      ? `<span class="badge gdg">📍 ${esc(d.gdgCommunity)}</span>`
+      : "";
+    const badge = d.exactMatch
+      ? `<span class="badge exact">✓ verbatim from card</span>`
+      : `<span class="badge reworded">≈ reworded</span>`;
+    const li = document.createElement("li");
+    li.className = "entry" + (d.exactMatch ? " is-exact" : "");
+    li.innerHTML =
+      `<p class="fact">${esc(d.fact)} ${badge}</p>` +
+      `<p class="meta">👤 <span class="person">${esc(d.person)}</span>${by} ${gdg}</p>`;
+    listEl.appendChild(li);
+  }
+}
+
+searchEl.addEventListener("input", render);
+
 const q = query(entries, orderBy("createdAt", "desc"));
 onSnapshot(
   q,
   (snap) => {
-    listEl.innerHTML = "";
-    countEl.textContent = snap.size;
-    emptyEl.classList.toggle("hidden", snap.size > 0);
-    snap.forEach((doc) => {
-      const d = doc.data();
-      const by = d.submittedBy ? ` · added by ${esc(d.submittedBy)}` : "";
-      const gdg = d.gdgCommunity
-        ? `<span class="badge gdg">📍 ${esc(d.gdgCommunity)}</span>`
-        : "";
-      const badge = d.exactMatch
-        ? `<span class="badge exact">✓ verbatim from card</span>`
-        : `<span class="badge reworded">≈ reworded</span>`;
-      const li = document.createElement("li");
-      li.className = "entry" + (d.exactMatch ? " is-exact" : "");
-      li.innerHTML =
-        `<p class="fact">${esc(d.fact)} ${badge}</p>` +
-        `<p class="meta">👤 <span class="person">${esc(d.person)}</span>${by} ${gdg}</p>`;
-      listEl.appendChild(li);
-    });
+    allEntries = snap.docs.map((doc) => doc.data());
+    render();
   },
   (err) => {
     console.error(err);
