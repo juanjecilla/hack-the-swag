@@ -25,6 +25,7 @@ const byEl = document.getElementById("submittedBy");
 const exactEl = document.getElementById("exactMatch");
 const btn = document.getElementById("submit-btn");
 const statusEl = document.getElementById("status");
+const dupWarnEl = document.getElementById("dupwarn");
 const listEl = document.getElementById("entries");
 const emptyEl = document.getElementById("empty");
 const countEl = document.getElementById("count");
@@ -91,6 +92,55 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+// --- Duplicate detection (client-side, over the in-memory entries) ---
+const normalize = (t) =>
+  (t || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+
+const wordSet = (t) =>
+  new Set(normalize(t).split(" ").filter((w) => w.length > 2));
+
+function jaccard(a, b) {
+  if (!a.size || !b.size) return 0;
+  const inter = [...a].filter((x) => b.has(x)).length;
+  const union = new Set([...a, ...b]).size;
+  return inter / union;
+}
+
+// Returns { type: "exact" | "near", match } or null.
+function findDuplicate(fact, person) {
+  const nFact = normalize(fact);
+  const nPerson = normalize(person);
+  if (!nFact || !nPerson) return null;
+  const factTokens = wordSet(fact);
+  for (const d of allEntries) {
+    if (normalize(d.person) !== nPerson) continue;
+    if (normalize(d.fact) === nFact) return { type: "exact", match: d };
+    if (jaccard(factTokens, wordSet(d.fact)) >= 0.6)
+      return { type: "near", match: d };
+  }
+  return null;
+}
+
+function checkDuplicate() {
+  const dup = findDuplicate(factEl.value, personEl.value);
+  if (!dup) {
+    dupWarnEl.textContent = "";
+    dupWarnEl.className = "dupwarn";
+    return null;
+  }
+  if (dup.type === "exact") {
+    dupWarnEl.textContent = `⛔ Duplicate: this exact fact about ${dup.match.person} is already on the wall.`;
+    dupWarnEl.className = "dupwarn exact";
+  } else {
+    dupWarnEl.textContent = `⚠️ Looks similar to an existing fact about ${dup.match.person}: “${dup.match.fact}”. You can still add it.`;
+    dupWarnEl.className = "dupwarn near";
+  }
+  return dup;
+}
+
+factEl.addEventListener("input", checkDuplicate);
+personEl.addEventListener("input", checkDuplicate);
+
 // --- Submit ---
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -104,6 +154,14 @@ form.addEventListener("submit", async (e) => {
   const submittedBy = byEl.value.trim() || currentUser.displayName || "";
   const exactMatch = exactEl.checked;
   if (!fact || !person || !gdgCommunity) return;
+
+  // Block exact duplicates; near-duplicates are warned but allowed.
+  const dup = findDuplicate(fact, person);
+  if (dup && dup.type === "exact") {
+    checkDuplicate();
+    setStatus("Already on the wall — not adding a duplicate.", "err");
+    return;
+  }
 
   btn.disabled = true;
   setStatus("Saving…");
@@ -121,6 +179,8 @@ form.addEventListener("submit", async (e) => {
     factEl.value = "";
     personEl.value = "";
     exactEl.checked = false;
+    dupWarnEl.textContent = "";
+    dupWarnEl.className = "dupwarn";
     factEl.focus();
     setStatus("Added! 🎉", "ok");
     setTimeout(() => setStatus(""), 2000);
