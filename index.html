@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎉 Community Bingo — Fun Facts</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <h1>🎉 Community Bingo</h1>
+      <p class="tagline">Drop a fun fact about a colleague. Collect swag. 🏆</p>
+    </header>
+
+    <form id="entry-form" autocomplete="off">
+      <label>
+        Fun fact
+        <input id="fact" name="fact" type="text" maxlength="140"
+               placeholder="e.g. Once coded for 24h straight on a hackathon" required />
+      </label>
+      <label>
+        About who?
+        <input id="person" name="person" type="text" maxlength="60"
+               placeholder="Name of the person" required />
+      </label>
+      <label>
+        Your name <span class="optional">(optional)</span>
+        <input id="submittedBy" name="submittedBy" type="text" maxlength="60"
+               placeholder="Who's adding this?" />
+      </label>
+      <label class="check">
+        <input id="exactMatch" name="exactMatch" type="checkbox" />
+        <span>Written <strong>exactly</strong> as it appears on the bingo card</span>
+      </label>
+      <button id="submit-btn" type="submit">Add fun fact</button>
+      <p id="status" class="status" role="status"></p>
+    </form>
+
+    <section class="board">
+      <div class="board-head">
+        <h2>Wall of fun facts</h2>
+        <span id="count" class="count">0</span>
+      </div>
+      <ul id="entries" class="entries"></ul>
+      <p id="empty" class="empty">No fun facts yet — be the first! ✨</p>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

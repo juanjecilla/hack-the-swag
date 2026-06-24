@@ -1,0 +1,22 @@
+# OS junk
+.DS_Store
+
+# Firebase CLI cache / logs (never commit these)
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*-debug.log
+
+# Service account keys / secrets — NEVER commit
+*serviceAccount*.json
+*-key.json
+.env
+.env.*
+
+# Node (only if you ever add tooling)
+node_modules/
+
+# NOTE: firebase-config.js is intentionally NOT ignored.
+# Firebase web config is public by design and the browser app needs it.
+# Access is controlled by firestore.rules, not by hiding this file.
