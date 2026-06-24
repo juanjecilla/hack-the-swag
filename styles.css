@@ -229,5 +229,31 @@ label.check input { width: auto; accent-color: var(--accent); transform: scale(1
 .entry .meta { margin: 6px 0 0; font-size: 0.8rem; color: var(--muted); }
 .entry .person { color: var(--accent); font-weight: 700; }
 
+.flags { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+.flag-btn {
+  background: var(--card-2);
+  color: var(--muted);
+  border: 1px solid #383c66;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flag-btn:hover { filter: brightness(1.15); }
+.flag-btn.active.duplicate { background: rgba(108, 140, 255, 0.22); color: var(--accent-2); border-color: var(--accent-2); }
+.flag-btn.active.wrong { background: rgba(255, 107, 107, 0.20); color: var(--err); border-color: var(--err); }
+
+.fcount {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 0.72rem;
+}
+
 .empty { color: var(--muted); text-align: center; padding: 18px; }
 .empty.hidden { display: none; }

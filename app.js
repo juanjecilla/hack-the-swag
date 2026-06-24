@@ -10,6 +10,9 @@ import {
   getFirestore,
   collection,
   addDoc,
+  doc,
+  setDoc,
+  deleteDoc,
   onSnapshot,
   query,
   orderBy,
@@ -90,6 +93,8 @@ onAuthStateChanged(auth, (user) => {
     nameTouched = false;
     byEl.value = "";
   }
+  // Re-evaluate which flags belong to the (now changed) user
+  if (typeof recomputeFlags === "function") recomputeFlags();
 });
 
 // --- Duplicate detection (client-side, over the in-memory entries) ---
@@ -199,13 +204,64 @@ function esc(s) {
   return d.innerHTML;
 }
 
+// --- Community flags (duplicate / wrong) ---
+const flags = collection(db, "flags");
+const FLAG_TYPES = { duplicate: "🔁 Duplicate", wrong: "🚩 Wrong" };
+const flagCounts = new Map(); // entryId -> { duplicate: n, wrong: n }
+const myFlags = new Set(); // `${entryId}__${type}` flagged by current user
+
+function flagId(entryId, type) {
+  return `${entryId}__${currentUser.uid}__${type}`;
+}
+
+async function toggleFlag(entryId, type) {
+  if (!currentUser) {
+    setStatus("Sign in with Google to flag entries.", "err");
+    return;
+  }
+  const key = `${entryId}__${type}`;
+  const ref = doc(flags, flagId(entryId, type));
+  try {
+    if (myFlags.has(key)) {
+      await deleteDoc(ref);
+    } else {
+      await setDoc(ref, {
+        entryId,
+        type,
+        uid: currentUser.uid,
+        createdAt: serverTimestamp(),
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus("Could not update flag: " + err.message, "err");
+  }
+}
+
+// Click handling for the flag buttons (event delegation)
+listEl.addEventListener("click", (e) => {
+  const b = e.target.closest("button.flag-btn");
+  if (b) toggleFlag(b.dataset.id, b.dataset.type);
+});
+
 // --- Live shared list (public read) + client-side search ---
-let allEntries = []; // latest snapshot data, newest first
+let allEntries = []; // latest snapshot data (with id), newest first
 
 function matchesSearch(d, term) {
   if (!term) return true;
   return [d.fact, d.person, d.gdgCommunity, d.submittedBy]
     .some((v) => (v || "").toLowerCase().includes(term));
+}
+
+function flagButtons(entryId) {
+  return Object.entries(FLAG_TYPES)
+    .map(([type, label]) => {
+      const c = (flagCounts.get(entryId) || {})[type] || 0;
+      const mine = myFlags.has(`${entryId}__${type}`);
+      const count = c ? ` <span class="fcount">${c}</span>` : "";
+      return `<button type="button" class="flag-btn ${type}${mine ? " active" : ""}" data-id="${entryId}" data-type="${type}" aria-pressed="${mine}">${label}${count}</button>`;
+    })
+    .join("");
 }
 
 function render() {
@@ -232,7 +288,8 @@ function render() {
     li.className = "entry" + (d.exactMatch ? " is-exact" : "");
     li.innerHTML =
       `<p class="fact">${esc(d.fact)} ${badge}</p>` +
-      `<p class="meta">👤 <span class="person">${esc(d.person)}</span>${by} ${gdg}</p>`;
+      `<p class="meta">👤 <span class="person">${esc(d.person)}</span>${by} ${gdg}</p>` +
+      `<div class="flags">${flagButtons(d.id)}</div>`;
     listEl.appendChild(li);
   }
 }
@@ -243,7 +300,7 @@ const q = query(entries, orderBy("createdAt", "desc"));
 onSnapshot(
   q,
   (snap) => {
-    allEntries = snap.docs.map((doc) => doc.data());
+    allEntries = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     render();
   },
   (err) => {
@@ -251,3 +308,26 @@ onSnapshot(
     setStatus("Live updates failed: " + err.message, "err");
   }
 );
+
+// Live aggregation of flags across all users
+let allFlags = [];
+
+function recomputeFlags() {
+  flagCounts.clear();
+  myFlags.clear();
+  for (const f of allFlags) {
+    if (!f.entryId || !f.type) continue;
+    const c = flagCounts.get(f.entryId) || { duplicate: 0, wrong: 0 };
+    c[f.type] = (c[f.type] || 0) + 1;
+    flagCounts.set(f.entryId, c);
+    if (currentUser && f.uid === currentUser.uid) {
+      myFlags.add(`${f.entryId}__${f.type}`);
+    }
+  }
+  render();
+}
+
+onSnapshot(flags, (snap) => {
+  allFlags = snap.docs.map((d) => d.data());
+  recomputeFlags();
+});

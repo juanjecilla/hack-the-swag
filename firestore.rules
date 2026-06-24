@@ -10,5 +10,20 @@ service cloud.firestore {
                     && request.resource.data.submittedByUid == request.auth.uid;
       allow update, delete: if false;
     }
+
+    // Community flags ("duplicate" / "wrong"). Doc id is
+    // `${entryId}__${uid}__${type}`, so each user can flag an entry once per
+    // type and toggle it off. Anyone can read the aggregate; only the owner
+    // can create or remove their own flag, and they cannot edit it in place.
+    match /flags/{id} {
+      allow read: if true;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
+                    && id == request.resource.data.entryId + '__' + request.auth.uid + '__' + request.resource.data.type
+                    && request.resource.data.type in ['duplicate', 'wrong'];
+      allow delete: if request.auth != null
+                    && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
   }
 }
