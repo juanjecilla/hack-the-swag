@@ -36,6 +36,51 @@ h1 { font-size: 2rem; margin: 0; }
 
 .tagline { color: var(--muted); margin: 6px 0 0; }
 
+.authbar {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-state {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.auth-state.hidden { display: none; }
+.auth-state p { margin: 0; color: var(--muted); }
+
+.google-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  color: #1f1f1f;
+  font-weight: 700;
+  padding: 11px 16px;
+  border-radius: 10px;
+  border: 1px solid #dadce0;
+}
+
+.who { color: var(--muted); font-size: 0.9rem; }
+.who strong { color: var(--text); }
+
+.link-btn {
+  background: transparent;
+  color: var(--accent-2);
+  font-weight: 700;
+  padding: 6px 8px;
+  border: none;
+}
+
+form.locked { opacity: 0.55; }
+form.locked input, form.locked button { cursor: not-allowed; }
+
 form {
   background: var(--card);
   border: 1px solid #2c2f52;
@@ -114,6 +159,7 @@ label.check input { width: auto; accent-color: var(--accent); transform: scale(1
 
 .badge.exact { background: rgba(69, 212, 131, 0.18); color: var(--ok); }
 .badge.reworded { background: rgba(154, 160, 199, 0.18); color: var(--muted); }
+.badge.gdg { background: rgba(108, 140, 255, 0.18); color: var(--accent-2); }
 
 .entry.is-exact { border-left-color: var(--ok); }
 
